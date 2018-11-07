@@ -26,7 +26,7 @@ typedef struct {
 #define U8TO64_LE(p) ((p))
 
 // set doubled (128->256 bits) siphash keys from 32 byte char array
-void setkeys(siphash_keys *keys, const char *keybuf) {
+static void setkeys(siphash_keys *keys, const char *keybuf) {
   keys->k0 = htole64(((u64 *)keybuf)[0]);
   keys->k1 = htole64(((u64 *)keybuf)[1]);
   keys->k2 = htole64(((u64 *)keybuf)[2]);
@@ -44,7 +44,7 @@ void setkeys(siphash_keys *keys, const char *keybuf) {
   } while(0)
  
 // SipHash-2-4 without standard IV xor and specialized to precomputed key and 8 byte nonces
-u64 siphash24(const siphash_keys *keys, const u64 nonce) {
+static u64 siphash24(const siphash_keys *keys, const u64 nonce) {
   u64 v0 = keys->k0, v1 = keys->k1, v2 = keys->k2, v3 = keys->k3 ^ nonce;
   SIPROUND; SIPROUND;
   v0 ^= nonce;
