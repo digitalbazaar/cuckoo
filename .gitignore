@@ -1,0 +1,15 @@
+*.so
+*.sublime-project
+*.sublime-workspace
+*.sw[nop]
+*~
+.DS_Store
+.cdtproject
+.classpath
+.cproject
+.project
+.settings
+TAGS
+build
+coverage
+dist
