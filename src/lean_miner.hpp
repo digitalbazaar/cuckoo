@@ -237,8 +237,9 @@ public:
   u32 nthreads;
   u32 ntrims;
   pthread_barrier_t barry;
+  bool debug;
 
-  cuckoo_ctx(u32 n_threads, u32 n_trims, u32 max_sols) {
+  cuckoo_ctx(u32 n_threads, u32 n_trims, u32 max_sols, bool debug) {
     nthreads = n_threads;
     alive = new shrinkingset(nthreads);
     cuckoo = 0;
@@ -249,6 +250,7 @@ public:
     sols = (nonce_t (*)[PROOFSIZE])calloc(maxsols = max_sols, PROOFSIZE*sizeof(nonce_t));
     assert(sols != 0);
     nsols = 0;
+    this->debug = debug;
   }
   void setheadernonce(char* headernonce, const u32 len, const u32 nce) {
     nonce = nce;
@@ -421,9 +423,14 @@ static void *worker(void *vp) {
 
   shrinkingset *alive = ctx->alive;
   if (tp->id == 0)
-    printf("initial size %d\n", NEDGES);
+    if (ctx->debug) {
+      printf("initial size %d\n", NEDGES);
+    }
   for (u32 round=1; round <= ctx->ntrims; round++) {
-    if (tp->id == 0) printf("round %2d partition sizes", round);
+    if (tp->id == 0)
+      if (ctx->debug) {
+        printf("round %2d partition sizes", round);
+      }
     for (u32 uorv = 0; uorv < 2; uorv++) {
       for (u32 part = 0; part <= PART_MASK; part++) {
         if (tp->id == 0)
@@ -435,15 +442,22 @@ static void *worker(void *vp) {
         barrier(&ctx->barry);
         if (tp->id == 0) {
           u32 size = alive->count();
-          printf(" %c%d %d", "UV"[uorv], part, size);
+          if (ctx->debug) {
+            printf(" %c%d %d", "UV"[uorv], part, size);
+          }
         }
       }
     }
-    if (tp->id == 0) printf("\n");
+    if (tp->id == 0)
+      if (ctx->debug) {
+        printf("\n");
+      }
   }
   if (tp->id == 0) {
     u32 load = (u32)(100LL * alive->count() / CUCKOO_SIZE);
-    printf("nonce %d: %d trims completed  final load %d%%\n", ctx->nonce, ctx->ntrims, load);
+    if (ctx->debug) {
+      printf("nonce %d: %d trims completed  final load %d%%\n", ctx->nonce, ctx->ntrims, load);
+    }
     if (load >= 90) {
       printf("overloaded! exiting...");
       pthread_exit(NULL);
@@ -473,7 +487,9 @@ static void *worker(void *vp) {
           u32 min = nu < nv ? nu : nv;
           for (nu -= min, nv -= min; us[nu] != vs[nv]; nu++, nv++) ;
           u32 len = nu + nv + 1;
-          printf("%4d-cycle found at %d:%d%%\n", len, tp->id, (u32)(nonce*100LL/NEDGES));
+          if (ctx->debug) {
+            printf("%4d-cycle found at %d:%d%%\n", len, tp->id, (u32)(nonce*100LL/NEDGES));
+          }
           if (len == PROOFSIZE && ctx->nsols < ctx->maxsols)
             ctx->solution(us, nu, vs, nv);
         } else if (nu < nv) {
@@ -492,5 +508,12 @@ static void *worker(void *vp) {
   pthread_exit(NULL);
   return 0;
 }
+
+void lean_miner(
+  unsigned nthreads, unsigned ntrims,
+  unsigned nonce, unsigned range,
+  char *header_in, size_t header_len,
+  unsigned *proofs_out, unsigned *nonces_out, unsigned *nsols_out,
+  bool debug);
 
 #endif
