@@ -6,6 +6,9 @@
 // define SINGLECYCLING to run cycle finding single threaded which runs slower
 // but avoids losing cycles to race conditions (not worth it in my testing)
 
+#ifndef CUCKOO_LEAN_MINER_HPP_
+#define CUCKOO_LEAN_MINER_HPP_
+
 #include "cuckoo.h"
 #include "../crypto/siphashxN.h"
 #include <stdio.h>
@@ -386,7 +389,7 @@ typedef struct {
   cuckoo_ctx *ctx;
 } thread_ctx;
 
-u32 path(cuckoo_hash &cuckoo, word_t u, word_t *us) {
+static u32 path(cuckoo_hash &cuckoo, word_t u, word_t *us) {
   u32 nu;
   for (nu = 0; u; u = cuckoo[u]) {
     if (nu >= MAXPATHLEN) {
@@ -401,7 +404,7 @@ u32 path(cuckoo_hash &cuckoo, word_t u, word_t *us) {
   return nu-1;
 }
 
-void *worker(void *vp) {
+static void *worker(void *vp) {
   thread_ctx *tp = (thread_ctx *)vp;
   cuckoo_ctx *ctx = tp->ctx;
 
@@ -472,3 +475,5 @@ void *worker(void *vp) {
   pthread_exit(NULL);
   return 0;
 }
+
+#endif
