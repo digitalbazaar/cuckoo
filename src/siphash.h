@@ -11,6 +11,14 @@
 #define htole64(x) OSSwapHostToLittleInt64(x)
 #endif
 
+// SIPHASH_C_D
+// C is number of rounds per message block
+// D is number of finalization rounds
+// SipHash-2-4 and SipHash-2-5 supported
+#if !defined(SIPHASH_2_4) && !defined(SIPHASH_2_5)
+#define SIPHASH_2_4
+#endif
+
 // save some keystrokes since i'm a lazy typer
 typedef uint32_t u32;
 typedef uint64_t u64;
@@ -49,7 +57,13 @@ static u64 siphash24(const siphash_keys *keys, const u64 nonce) {
   SIPROUND; SIPROUND;
   v0 ^= nonce;
   v2 ^= 0xff;
+  #if defined(SIPHASH_2_4)
   SIPROUND; SIPROUND; SIPROUND; SIPROUND;
+  #elif defined(SIPHASH_2_5)
+  SIPROUND; SIPROUND; SIPROUND; SIPROUND; SIPROUND;
+  #else
+  #error Unsupported SIPHASH_C_D
+  #endif
   return (v0 ^ v1) ^ (v2  ^ v3);
 }
 // standard siphash24 definition can be recovered by calling setkeys with

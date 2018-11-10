@@ -1,6 +1,14 @@
 #ifndef INCLUDE_SIPHASHXN_H
 #define INCLUDE_SIPHASHXN_H
 
+// SIPHASH_C_D
+// C is number of rounds per message block
+// D is number of finalization rounds
+// SipHash-2-4 and SipHash-2-5 supported
+#if !defined(SIPHASH_2_4) && !defined(SIPHASH_2_5)
+#define SIPHASH_2_4
+#endif
+
 #ifdef __AVX2__
 
 #define ADD(a, b) _mm256_add_epi64(a, b)
@@ -84,7 +92,13 @@ static void siphash24x4(const siphash_keys *keys, const u64 *indices, u64 *hashe
   SIPROUNDXN; SIPROUNDXN;
   v0 = XOR(v0,packet);
   v2 = XOR(v2,_mm256_set1_epi64x(0xffLL));
+  #if defined(SIPHASH_2_4)
   SIPROUNDXN; SIPROUNDXN; SIPROUNDXN; SIPROUNDXN;
+  #elif defined(SIPHASH_2_5)
+  SIPROUNDXN; SIPROUNDXN; SIPROUNDXN; SIPROUNDXN; SIPROUNDXN;
+  #else
+  #error Unsupported SIPHASH_C_D
+  #endif
   _mm256_store_si256((__m256i *)hashes, XOR(XOR(v0,v1),XOR(v2,v3)));
 }
 
@@ -103,7 +117,13 @@ static void siphash24x8(const siphash_keys *keys, const u64 *indices, u64 *hashe
   v0 = XOR(v0,packet0); v4 = XOR(v4,packet4);
   v2 = XOR(v2,_mm256_set1_epi64x(0xffLL));
   v6 = XOR(v6,_mm256_set1_epi64x(0xffLL));
+  #if defined(SIPHASH_2_4)
   SIPROUNDX2N; SIPROUNDX2N; SIPROUNDX2N; SIPROUNDX2N;
+  #elif defined(SIPHASH_2_5)
+  SIPROUNDX2N; SIPROUNDX2N; SIPROUNDX2N; SIPROUNDX2N; SIPROUNDX2N;
+  #else
+  #error Unsupported SIPHASH_C_D
+  #endif
   _mm256_store_si256((__m256i *)hashes, XOR(XOR(v0,v1),XOR(v2,v3)));
   _mm256_store_si256((__m256i *)(hashes+4), XOR(XOR(v4,v5),XOR(v6,v7)));
 }
@@ -127,7 +147,13 @@ static void siphash24x16(const siphash_keys *keys, const u64 *indices, u64 *hash
   v6 = XOR(v6,_mm256_set1_epi64x(0xffLL));
   vA = XOR(vA,_mm256_set1_epi64x(0xffLL));
   vE = XOR(vE,_mm256_set1_epi64x(0xffLL));
+  #if defined(SIPHASH_2_4)
   SIPROUNDX4N; SIPROUNDX4N; SIPROUNDX4N; SIPROUNDX4N;
+  #elif defined(SIPHASH_2_5)
+  SIPROUNDX4N; SIPROUNDX4N; SIPROUNDX4N; SIPROUNDX4N; SIPROUNDX4N;
+  #else
+  #error Unsupported SIPHASH_C_D
+  #endif
   _mm256_store_si256((__m256i *) hashes    , XOR(XOR(v0,v1),XOR(v2,v3)));
   _mm256_store_si256((__m256i *)(hashes+ 4), XOR(XOR(v4,v5),XOR(v6,v7)));
   _mm256_store_si256((__m256i *)(hashes+ 8), XOR(XOR(v8,v9),XOR(vA,vB)));
@@ -150,7 +176,13 @@ static void siphash24x2(const siphash_keys *keys, const u64 *indices, u64 *hashe
   v0 = XOR (v0, mi);
   
   v2 = XOR (v2, _mm_set1_epi64x(0xffLL));
+  #if defined(SIPHASH_2_4)
   SIPROUNDXN; SIPROUNDXN; SIPROUNDXN; SIPROUNDXN;
+  #elif defined(SIPHASH_2_5)
+  SIPROUNDXN; SIPROUNDXN; SIPROUNDXN; SIPROUNDXN; SIPROUNDXN;
+  #else
+  #error Unsupported SIPHASH_C_D
+  #endif
   mi = XOR(XOR(v0,v1),XOR(v2,v3));
   
   _mm_store_si128((__m128i *)hashes, mi);
@@ -175,7 +207,13 @@ static void siphash24x4(const siphash_keys *keys, const u64 *indices, u64 *hashe
 
   v2 = XOR (v2, _mm_set1_epi64x(0xffLL));
   v6 = XOR (v6, _mm_set1_epi64x(0xffLL));
+  #if defined(SIPHASH_2_4)
   SIPROUNDX2N; SIPROUNDX2N; SIPROUNDX2N; SIPROUNDX2N;
+  #elif defined(SIPHASH_2_5)
+  SIPROUNDX2N; SIPROUNDX2N; SIPROUNDX2N; SIPROUNDX2N; SIPROUNDX2N;
+  #else
+  #error Unsupported SIPHASH_C_D
+  #endif
   mi = XOR(XOR(v0,v1),XOR(v2,v3));
   m2 = XOR(XOR(v4,v5),XOR(v6,v7));
   
