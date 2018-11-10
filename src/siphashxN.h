@@ -1,6 +1,14 @@
 #ifndef INCLUDE_SIPHASHXN_H
 #define INCLUDE_SIPHASHXN_H
 
+// SIPHASH_C_D
+// C is number of rounds per message block
+// D is number of finalization rounds
+// SipHash-2-4 and SipHash-2-5 supported
+#if !defined(SIPHASH_2_4) && !defined(SIPHASH_2_5)
+#define SIPHASH_2_4
+#endif
+
 #ifdef __AVX2__
 
 #define ADD(a, b) _mm256_add_epi64(a, b)
@@ -73,7 +81,7 @@
 #ifdef __AVX2__
 
 // 4-way sipHash-2-4 specialized to precomputed key and 8 byte nonces
-void siphash24x4(const siphash_keys *keys, const u64 *indices, u64 *hashes) {
+static void siphash24x4(const siphash_keys *keys, const u64 *indices, u64 *hashes) {
   const __m256i packet = _mm256_load_si256((__m256i *)indices);
   __m256i v0 = _mm256_set1_epi64x(keys->k0);
   __m256i v1 = _mm256_set1_epi64x(keys->k1);
@@ -84,12 +92,18 @@ void siphash24x4(const siphash_keys *keys, const u64 *indices, u64 *hashes) {
   SIPROUNDXN; SIPROUNDXN;
   v0 = XOR(v0,packet);
   v2 = XOR(v2,_mm256_set1_epi64x(0xffLL));
+  #if defined(SIPHASH_2_4)
   SIPROUNDXN; SIPROUNDXN; SIPROUNDXN; SIPROUNDXN;
+  #elif defined(SIPHASH_2_5)
+  SIPROUNDXN; SIPROUNDXN; SIPROUNDXN; SIPROUNDXN; SIPROUNDXN;
+  #else
+  #error Unsupported SIPHASH_C_D
+  #endif
   _mm256_store_si256((__m256i *)hashes, XOR(XOR(v0,v1),XOR(v2,v3)));
 }
 
 // 8-way sipHash-2-4 specialized to precomputed key and 8 byte nonces
-void siphash24x8(const siphash_keys *keys, const u64 *indices, u64 *hashes) {
+static void siphash24x8(const siphash_keys *keys, const u64 *indices, u64 *hashes) {
   const __m256i packet0 = _mm256_load_si256((__m256i *)indices);
   const __m256i packet4 = _mm256_load_si256((__m256i *)(indices+4));
   __m256i v0, v1, v2, v3, v4, v5, v6, v7;
@@ -103,13 +117,19 @@ void siphash24x8(const siphash_keys *keys, const u64 *indices, u64 *hashes) {
   v0 = XOR(v0,packet0); v4 = XOR(v4,packet4);
   v2 = XOR(v2,_mm256_set1_epi64x(0xffLL));
   v6 = XOR(v6,_mm256_set1_epi64x(0xffLL));
+  #if defined(SIPHASH_2_4)
   SIPROUNDX2N; SIPROUNDX2N; SIPROUNDX2N; SIPROUNDX2N;
+  #elif defined(SIPHASH_2_5)
+  SIPROUNDX2N; SIPROUNDX2N; SIPROUNDX2N; SIPROUNDX2N; SIPROUNDX2N;
+  #else
+  #error Unsupported SIPHASH_C_D
+  #endif
   _mm256_store_si256((__m256i *)hashes, XOR(XOR(v0,v1),XOR(v2,v3)));
   _mm256_store_si256((__m256i *)(hashes+4), XOR(XOR(v4,v5),XOR(v6,v7)));
 }
 
 // 16-way sipHash-2-4 specialized to precomputed key and 8 byte nonces
-void siphash24x16(const siphash_keys *keys, const u64 *indices, u64 *hashes) {
+static void siphash24x16(const siphash_keys *keys, const u64 *indices, u64 *hashes) {
   const __m256i packet0 = _mm256_load_si256((__m256i *)indices);
   const __m256i packet4 = _mm256_load_si256((__m256i *)(indices+4));
   const __m256i packet8 = _mm256_load_si256((__m256i *)(indices+8));
@@ -127,7 +147,13 @@ void siphash24x16(const siphash_keys *keys, const u64 *indices, u64 *hashes) {
   v6 = XOR(v6,_mm256_set1_epi64x(0xffLL));
   vA = XOR(vA,_mm256_set1_epi64x(0xffLL));
   vE = XOR(vE,_mm256_set1_epi64x(0xffLL));
+  #if defined(SIPHASH_2_4)
   SIPROUNDX4N; SIPROUNDX4N; SIPROUNDX4N; SIPROUNDX4N;
+  #elif defined(SIPHASH_2_5)
+  SIPROUNDX4N; SIPROUNDX4N; SIPROUNDX4N; SIPROUNDX4N; SIPROUNDX4N;
+  #else
+  #error Unsupported SIPHASH_C_D
+  #endif
   _mm256_store_si256((__m256i *) hashes    , XOR(XOR(v0,v1),XOR(v2,v3)));
   _mm256_store_si256((__m256i *)(hashes+ 4), XOR(XOR(v4,v5),XOR(v6,v7)));
   _mm256_store_si256((__m256i *)(hashes+ 8), XOR(XOR(v8,v9),XOR(vA,vB)));
@@ -137,7 +163,7 @@ void siphash24x16(const siphash_keys *keys, const u64 *indices, u64 *hashes) {
 #elif defined __SSE2__
 
 // 2-way sipHash-2-4 specialized to precomputed key and 8 byte nonces
-void siphash24x2(const siphash_keys *keys, const u64 *indices, u64 *hashes) {
+static void siphash24x2(const siphash_keys *keys, const u64 *indices, u64 *hashes) {
   __m128i v0, v1, v2, v3, mi;
   v0 = _mm_set1_epi64x(keys->k0);
   v1 = _mm_set1_epi64x(keys->k1);
@@ -150,14 +176,20 @@ void siphash24x2(const siphash_keys *keys, const u64 *indices, u64 *hashes) {
   v0 = XOR (v0, mi);
   
   v2 = XOR (v2, _mm_set1_epi64x(0xffLL));
+  #if defined(SIPHASH_2_4)
   SIPROUNDXN; SIPROUNDXN; SIPROUNDXN; SIPROUNDXN;
+  #elif defined(SIPHASH_2_5)
+  SIPROUNDXN; SIPROUNDXN; SIPROUNDXN; SIPROUNDXN; SIPROUNDXN;
+  #else
+  #error Unsupported SIPHASH_C_D
+  #endif
   mi = XOR(XOR(v0,v1),XOR(v2,v3));
   
   _mm_store_si128((__m128i *)hashes, mi);
 }
 
 // 4-way sipHash-2-4 specialized to precomputed key and 8 byte nonces
-void siphash24x4(const siphash_keys *keys, const u64 *indices, u64 *hashes) {
+static void siphash24x4(const siphash_keys *keys, const u64 *indices, u64 *hashes) {
   __m128i v0, v1, v2, v3, mi, v4, v5, v6, v7, m2;
   v4 = v0 = _mm_set1_epi64x(keys->k0);
   v5 = v1 = _mm_set1_epi64x(keys->k1);
@@ -175,7 +207,13 @@ void siphash24x4(const siphash_keys *keys, const u64 *indices, u64 *hashes) {
 
   v2 = XOR (v2, _mm_set1_epi64x(0xffLL));
   v6 = XOR (v6, _mm_set1_epi64x(0xffLL));
+  #if defined(SIPHASH_2_4)
   SIPROUNDX2N; SIPROUNDX2N; SIPROUNDX2N; SIPROUNDX2N;
+  #elif defined(SIPHASH_2_5)
+  SIPROUNDX2N; SIPROUNDX2N; SIPROUNDX2N; SIPROUNDX2N; SIPROUNDX2N;
+  #else
+  #error Unsupported SIPHASH_C_D
+  #endif
   mi = XOR(XOR(v0,v1),XOR(v2,v3));
   m2 = XOR(XOR(v4,v5),XOR(v6,v7));
   
@@ -192,7 +230,7 @@ void siphash24x4(const siphash_keys *keys, const u64 *indices, u64 *hashes) {
 #define NSIPHASH 1
 #endif
 
-void siphash24xN(const siphash_keys *keys, const u64 *indices, u64 * hashes) {
+static void siphash24xN(const siphash_keys *keys, const u64 *indices, u64 * hashes) {
 #if NSIPHASH == 1
   *hashes = siphash24(keys, *indices);
 #elif NSIPHASH == 2  

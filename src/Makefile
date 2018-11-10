@@ -13,7 +13,14 @@ CFLAGS ?= -Wall -Wno-format -fomit-frame-pointer $(OPT)
 GCC ?= gcc $(GCC_ARCH_FLAGS) -std=gnu11 $(CFLAGS)
 LIBS ?= -L. -lblake2b
 
-all : libblake2b.so test example lean28stx8 mean28x8 lean30stx8 mean30x8 lean32stx8 mean32x8 verify28 verify30 verify32 demo30x8
+#all : libblake2b.so test example lean28stx8 mean28x8 lean30stx8 mean30x8 lean32stx8 mean32x8 verify28 verify30 verify32 demo30x8
+#all : test example lean mean verify
+all : test example lean verify
+lean : libblake2b.so lean28stx8 lean30stx8 lean32stx8
+mean : libblake2b.so mean28x8 mean30x8 mean32x8
+verify : libblake2b.so verify28 verify30 verify32 demo30x8
+
+.PHONY: test example lean mean verify
 
 libblake2b.so:	blake2.h blake2-impl.h blake2b-ref.c
 	$(GCC) -fPIC -shared -o libblake2b.so blake2b-ref.c

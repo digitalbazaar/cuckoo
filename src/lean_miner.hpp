@@ -6,6 +6,9 @@
 // define SINGLECYCLING to run cycle finding single threaded which runs slower
 // but avoids losing cycles to race conditions (not worth it in my testing)
 
+#ifndef CUCKOO_LEAN_MINER_HPP_
+#define CUCKOO_LEAN_MINER_HPP_
+
 #include "cuckoo.h"
 #include "siphashxN.h"
 #include <stdio.h>
@@ -234,8 +237,9 @@ public:
   u32 nthreads;
   u32 ntrims;
   pthread_barrier_t barry;
+  bool debug;
 
-  cuckoo_ctx(u32 n_threads, u32 n_trims, u32 max_sols) {
+  cuckoo_ctx(u32 n_threads, u32 n_trims, u32 max_sols, bool debug) {
     nthreads = n_threads;
     alive = new shrinkingset(nthreads);
     cuckoo = 0;
@@ -246,6 +250,7 @@ public:
     sols = (nonce_t (*)[PROOFSIZE])calloc(maxsols = max_sols, PROOFSIZE*sizeof(nonce_t));
     assert(sols != 0);
     nsols = 0;
+    this->debug = debug;
   }
   void setheadernonce(char* headernonce, const u32 len, const u32 nce) {
     nonce = nce;
@@ -389,7 +394,7 @@ typedef struct {
   cuckoo_ctx *ctx;
 } thread_ctx;
 
-void barrier(pthread_barrier_t *barry) {
+static void barrier(pthread_barrier_t *barry) {
   int rc = pthread_barrier_wait(barry);
   if (rc != 0 && rc != PTHREAD_BARRIER_SERIAL_THREAD) {
     printf("Could not wait on barrier\n");
@@ -397,7 +402,7 @@ void barrier(pthread_barrier_t *barry) {
   }
 }
 
-u32 path(cuckoo_hash &cuckoo, node_t u, node_t *us) {
+static u32 path(cuckoo_hash &cuckoo, node_t u, node_t *us) {
   u32 nu;
   for (nu = 0; u; u = cuckoo[u]) {
     if (nu >= MAXPATHLEN) {
@@ -412,15 +417,20 @@ u32 path(cuckoo_hash &cuckoo, node_t u, node_t *us) {
   return nu-1;
 }
 
-void *worker(void *vp) {
+static void *worker(void *vp) {
   thread_ctx *tp = (thread_ctx *)vp;
   cuckoo_ctx *ctx = tp->ctx;
 
   shrinkingset *alive = ctx->alive;
   if (tp->id == 0)
-    printf("initial size %d\n", NEDGES);
+    if (ctx->debug) {
+      printf("initial size %d\n", NEDGES);
+    }
   for (u32 round=1; round <= ctx->ntrims; round++) {
-    if (tp->id == 0) printf("round %2d partition sizes", round);
+    if (tp->id == 0)
+      if (ctx->debug) {
+        printf("round %2d partition sizes", round);
+      }
     for (u32 uorv = 0; uorv < 2; uorv++) {
       for (u32 part = 0; part <= PART_MASK; part++) {
         if (tp->id == 0)
@@ -432,15 +442,22 @@ void *worker(void *vp) {
         barrier(&ctx->barry);
         if (tp->id == 0) {
           u32 size = alive->count();
-          printf(" %c%d %d", "UV"[uorv], part, size);
+          if (ctx->debug) {
+            printf(" %c%d %d", "UV"[uorv], part, size);
+          }
         }
       }
     }
-    if (tp->id == 0) printf("\n");
+    if (tp->id == 0)
+      if (ctx->debug) {
+        printf("\n");
+      }
   }
   if (tp->id == 0) {
     u32 load = (u32)(100LL * alive->count() / CUCKOO_SIZE);
-    printf("nonce %d: %d trims completed  final load %d%%\n", ctx->nonce, ctx->ntrims, load);
+    if (ctx->debug) {
+      printf("nonce %d: %d trims completed  final load %d%%\n", ctx->nonce, ctx->ntrims, load);
+    }
     if (load >= 90) {
       printf("overloaded! exiting...");
       pthread_exit(NULL);
@@ -470,7 +487,9 @@ void *worker(void *vp) {
           u32 min = nu < nv ? nu : nv;
           for (nu -= min, nv -= min; us[nu] != vs[nv]; nu++, nv++) ;
           u32 len = nu + nv + 1;
-          printf("%4d-cycle found at %d:%d%%\n", len, tp->id, (u32)(nonce*100LL/NEDGES));
+          if (ctx->debug) {
+            printf("%4d-cycle found at %d:%d%%\n", len, tp->id, (u32)(nonce*100LL/NEDGES));
+          }
           if (len == PROOFSIZE && ctx->nsols < ctx->maxsols)
             ctx->solution(us, nu, vs, nv);
         } else if (nu < nv) {
@@ -489,3 +508,12 @@ void *worker(void *vp) {
   pthread_exit(NULL);
   return 0;
 }
+
+void lean_miner(
+  unsigned nthreads, unsigned ntrims,
+  unsigned nonce, unsigned range,
+  char *header_in, size_t header_len,
+  unsigned *proofs_out, unsigned *nonces_out, unsigned *nsols_out,
+  bool debug);
+
+#endif

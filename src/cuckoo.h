@@ -1,5 +1,8 @@
 // Cuckoo Cycle, a memory-hard proof-of-work
 // Copyright (c) 2013-2017 John Tromp
+//
+#ifndef CUCKOO_H_
+#define CUCKOO_H_
 
 #include <stdint.h> // for types uint32_t,uint64_t
 #include <string.h> // for functions strlen, memset
@@ -39,15 +42,15 @@ typedef u32 node_t;
 #define EDGEMASK ((edge_t)NEDGES - 1)
 
 // generate edge endpoint in cuckoo graph without partition bit
-node_t sipnode(siphash_keys *keys, edge_t edge, u32 uorv) {
+static node_t sipnode(siphash_keys *keys, edge_t edge, u32 uorv) {
   return siphash24(keys, 2*edge + uorv) & EDGEMASK;
 }
 
 enum verify_code { POW_OK, POW_HEADER_LENGTH, POW_TOO_BIG, POW_TOO_SMALL, POW_NON_MATCHING, POW_BRANCH, POW_DEAD_END, POW_SHORT_CYCLE};
-const char *errstr[] = { "OK", "wrong header length", "edge too big", "edges not ascending", "endpoints don't match up", "branch in cycle", "cycle dead ends", "cycle too short"};
+static const char *errstr[] = { "OK", "wrong header length", "edge too big", "edges not ascending", "endpoints don't match up", "branch in cycle", "cycle dead ends", "cycle too short"};
 
 // verify that edges are ascending and form a cycle in header-generated graph
-int verify(edge_t edges[PROOFSIZE], siphash_keys *keys) {
+static int verify(edge_t edges[PROOFSIZE], siphash_keys *keys) {
   node_t uvs[2*PROOFSIZE];
   node_t xor0 = 0, xor1  =0;
   for (u32 n = 0; n < PROOFSIZE; n++) {
@@ -77,7 +80,7 @@ int verify(edge_t edges[PROOFSIZE], siphash_keys *keys) {
 }
 
 // convenience function for extracting siphash keys from header
-void setheader(const char *header, const u32 headerlen, siphash_keys *keys) {
+static void setheader(const char *header, const u32 headerlen, siphash_keys *keys) {
   char hdrkey[32];
   // SHA256((unsigned char *)header, headerlen, (unsigned char *)hdrkey);
   blake2b((void *)hdrkey, sizeof(hdrkey), (const void *)header, headerlen, 0, 0);
@@ -95,6 +98,8 @@ void setheader(const char *header, const u32 headerlen, siphash_keys *keys) {
 }
 
 // edge endpoint in cuckoo graph with partition bit
-edge_t sipnode_(siphash_keys *keys, edge_t edge, u32 uorv) {
+static edge_t sipnode_(siphash_keys *keys, edge_t edge, u32 uorv) {
   return sipnode(keys, edge, uorv) << 1 | uorv;
 }
+
+#endif

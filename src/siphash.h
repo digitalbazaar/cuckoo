@@ -11,6 +11,14 @@
 #define htole64(x) OSSwapHostToLittleInt64(x)
 #endif
 
+// SIPHASH_C_D
+// C is number of rounds per message block
+// D is number of finalization rounds
+// SipHash-2-4 and SipHash-2-5 supported
+#if !defined(SIPHASH_2_4) && !defined(SIPHASH_2_5)
+#define SIPHASH_2_4
+#endif
+
 // save some keystrokes since i'm a lazy typer
 typedef uint32_t u32;
 typedef uint64_t u64;
@@ -26,7 +34,7 @@ typedef struct {
 #define U8TO64_LE(p) ((p))
 
 // set doubled (128->256 bits) siphash keys from 32 byte char array
-void setkeys(siphash_keys *keys, const char *keybuf) {
+static void setkeys(siphash_keys *keys, const char *keybuf) {
   keys->k0 = htole64(((u64 *)keybuf)[0]);
   keys->k1 = htole64(((u64 *)keybuf)[1]);
   keys->k2 = htole64(((u64 *)keybuf)[2]);
@@ -44,12 +52,18 @@ void setkeys(siphash_keys *keys, const char *keybuf) {
   } while(0)
  
 // SipHash-2-4 without standard IV xor and specialized to precomputed key and 8 byte nonces
-u64 siphash24(const siphash_keys *keys, const u64 nonce) {
+static u64 siphash24(const siphash_keys *keys, const u64 nonce) {
   u64 v0 = keys->k0, v1 = keys->k1, v2 = keys->k2, v3 = keys->k3 ^ nonce;
   SIPROUND; SIPROUND;
   v0 ^= nonce;
   v2 ^= 0xff;
+  #if defined(SIPHASH_2_4)
   SIPROUND; SIPROUND; SIPROUND; SIPROUND;
+  #elif defined(SIPHASH_2_5)
+  SIPROUND; SIPROUND; SIPROUND; SIPROUND; SIPROUND;
+  #else
+  #error Unsupported SIPHASH_C_D
+  #endif
   return (v0 ^ v1) ^ (v2  ^ v3);
 }
 // standard siphash24 definition can be recovered by calling setkeys with
