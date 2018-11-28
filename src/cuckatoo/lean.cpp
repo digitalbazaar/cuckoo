@@ -76,6 +76,9 @@ CALL_CONVENTION int run_solver(SolverCtx* ctx,
       stats->last_end_time = time1;
       stats->last_solution_time = time1 - time0;
     }
+    if (sumnsols > 0) {
+      break;
+    }
   }
   delete[] threads;
   print_log("%d total solutions\n", sumnsols);
