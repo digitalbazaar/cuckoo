@@ -229,7 +229,7 @@ typedef struct {
   cuckoo_ctx *ctx;
 } thread_ctx;
 
-void *worker(void *vp) {
+static void *worker(void *vp) {
   thread_ctx *tp = (thread_ctx *)vp;
   cuckoo_ctx *ctx = tp->ctx;
 
@@ -283,3 +283,18 @@ void *worker(void *vp) {
   pthread_exit(NULL);
   return 0;
 }
+
+typedef cuckoo_ctx SolverCtx;
+
+CALL_CONVENTION int run_solver(SolverCtx* ctx,
+                               char* header,
+                               int header_length,
+                               u32 nonce,
+                               u32 range,
+                               SolverSolutions *solutions,
+                               SolverStats *stats
+                               );
+CALL_CONVENTION SolverCtx* create_solver_ctx(SolverParams* params);
+CALL_CONVENTION void destroy_solver_ctx(SolverCtx* ctx);
+CALL_CONVENTION void stop_solver(SolverCtx* ctx);
+CALL_CONVENTION void fill_default_params(SolverParams* params);
